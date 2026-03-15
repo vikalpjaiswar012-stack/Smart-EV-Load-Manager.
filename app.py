@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # --- 1. PAGE SETUP & THEME ---
-st.set_page_config(page_title="HPCL Smart EV Load Manager", layout="wide")
+st.set_page_config(page_title="Smart EV Load Manager", layout="wide")
 
 # HPCL Branding Header
 st.markdown("""
