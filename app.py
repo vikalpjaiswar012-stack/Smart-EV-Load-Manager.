@@ -10,7 +10,7 @@ st.set_page_config(page_title="Smart EV Load Manager", layout="wide")
 # HPCL Branding Header
 st.markdown("""
     <div style="background-color:#003366;padding:15px;border-radius:10px;border-left:8px solid #ed1c24;">
-        <h1 style="color:white;margin:0;">HPCL HPe-Charge | Industrial Load Manager</h1>
+        <h1 style="color:white;margin:0;"> HPe-Charge | Industrial Load Manager</h1>
         <p style="color:white;margin:5px;">Smart DLM • Dynamic Pricing • Solar Integration</p>
     </div>
     """, unsafe_allow_html=True)
