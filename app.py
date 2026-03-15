@@ -1,30 +1,63 @@
-# HPCL Smart EV: Dynamic Load Management (DLM) System
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
 
-![License](https://img.shields.io/badge/Industry-Oil%20%26%20Gas-blue)
-![OCPP](https://img.shields.io/badge/Protocol-OCPP%201.6J-green)
-![Python](https://img.shields.io/badge/Tech-Python%20%7C%20Streamlit-orange)
+# --- Page Config ---
+st.set_page_config(page_title="HPCL Smart EV Load Manager", layout="wide")
 
-### 📌 Project Overview
-As HPCL transitions to an "Energy Company," installing high-power DC Fast Chargers at existing fuel retail outlets presents a major challenge: **Grid Capacity.** This project provides a **Software-Defined Load Balancing** solution that monitors the total power consumption of a petrol pump in real-time. It dynamically throttles the power allocated to EV chargers to ensure the station stays within its sanctioned grid limit, eliminating the need for expensive transformer upgrades.
+st.title("⚡ HPCL Retail Outlet: Dynamic Load Management System")
+st.markdown("Designed for **OCPP 1.6J Compliance** | Prevents Grid Overload")
 
-### 🚀 Key Features
-- **Dynamic Power Throttling:** Real-time adjustment of charging speeds based on total outlet load (Lights + Dispensers + EV Chargers).
-- **SoC-Based Priority:** Automatically gives higher power to vehicles with lower battery percentages (State of Charge).
-- **OCPP 1.6J Simulation:** Uses JSON-based WebSocket logic to simulate industry-standard communication between the charger and the Central Management System (CSMS).
-- **Live Dashboard:** Interactive UI for station managers to monitor grid health and charging session status.
+# --- Sidebar: Station Settings ---
+st.sidebar.header("Station Configuration")
+grid_limit = st.sidebar.slider("Grid Sanctioned Load (kW)", 50, 200, 100)
+pump_base_load = st.sidebar.slider("Current Pump Load (Lights/Dispenser) (kW)", 5, 50, 20)
 
-### 🛠️ Tech Stack
-- **Language:** Python 3.9+
-- **Framework:** Streamlit (For the Real-time Dashboard)
-- **Visualization:** Plotly & Pandas
-- **Communication Protocol:** JSON/WebSockets (Simulating OCPP 1.6J)
+# --- Logic: The Smart Balancing Algorithm ---
+available_for_ev = grid_limit - pump_base_load
 
-### 🏭 Industry Relevance (PSU Context)
-- **Operational Safety:** Aligned with **OISD-156** standards for electrical installations in hazardous petroleum zones.
-- **Cost Optimization:** Reduces **CAPEX** by 40-60% by utilizing existing transformer capacity.
-- **Interoperability:** Built on Open Charge Point Protocols, supporting HPCL's goal of a vendor-neutral charging network.
+# Simulate 3 Charging Guns
+col1, col2, col3 = st.columns(3)
+ev1_soc = col1.slider("Car 1 Battery %", 0, 100, 20)
+ev2_soc = col2.slider("Car 2 Battery %", 0, 100, 85)
+ev3_soc = col3.slider("Car 3 Battery %", 0, 100, 50)
 
-### 💻 How to Run
-1. Clone the repository:
-   ```bash
-   git clone [https://github.com/YOUR_USERNAME/HPCL-Smart-EV-Load-Manager.git](https://github.com/YOUR_USERNAME/HPCL-Smart-EV-Load-Manager.git)
+# Allocation Logic
+total_demand = 120 
+if total_demand > available_for_ev:
+    ev1_share = (100 - ev1_soc)
+    ev2_share = (100 - ev2_soc)
+    ev3_share = (100 - ev3_soc)
+    total_shares = ev1_share + ev2_share + ev3_share
+    
+    ev1_pwr = (ev1_share / total_shares) * available_for_ev
+    ev2_pwr = (ev2_share / total_shares) * available_for_ev
+    ev3_pwr = (ev3_share / total_shares) * available_for_ev
+else:
+    ev1_pwr, ev2_pwr, ev3_pwr = 40, 40, 40
+
+# --- Visualizing the Load ---
+fig = go.Figure(data=[
+    go.Bar(name='Pump Base Load', x=['Grid Usage'], y=[pump_base_load], marker_color='#FF4B4B'),
+    go.Bar(name='Car 1 (Fast)', x=['Grid Usage'], y=[ev1_pwr], marker_color='#00CC96'),
+    go.Bar(name='Car 2 (Throttled)', x=['Grid Usage'], y=[ev2_pwr], marker_color='#636EFA'),
+    go.Bar(name='Car 3 (Standard)', x=['Grid Usage'], y=[ev3_pwr], marker_color='#AB63FA')
+])
+
+fig.update_layout(barmode='stack', title="Real-time Power Distribution (kW)", 
+                  yaxis=dict(range=[0, grid_limit + 20]),
+                  shapes=[dict(type="line", x0=-0.5, x1=0.5, y0=grid_limit, y1=grid_limit, 
+                               line=dict(color="Red", width=3, dash="dash"))])
+
+st.plotly_chart(fig, use_container_width=True)
+
+if (pump_base_load + ev1_pwr + ev2_pwr + ev3_pwr) >= grid_limit:
+    st.error(f"⚠️ GRID AT CAPACITY! Throttling Active.")
+else:
+    st.success("✅ System Stable.")
+
+st.table(pd.DataFrame({
+    "Charger ID": ["EV-HP-001", "EV-HP-002", "EV-HP-003"],
+    "Power Allocated (kW)": [round(ev1_pwr, 2), round(ev2_pwr, 2), round(ev3_pwr, 2)],
+    "Priority": ["High", "Low", "Medium"]
+}))
